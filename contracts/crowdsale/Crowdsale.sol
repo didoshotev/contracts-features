@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@chainlink/contracts/src/v0.6/interfaces/AggregatorV3Interface.sol";
 
 /**
  * @title Crowdsale
@@ -32,6 +33,8 @@ contract Crowdsale is Ownable, ReentrancyGuard {
     // Flag to indicate if the presale has ended
     bool public presaleEnded;
 
+    AggregatorV3Interface internal priceFeed;
+
     /**
      * Event for token purchase logging
      * @param purchaser who paid for the tokens
@@ -50,14 +53,16 @@ contract Crowdsale is Ownable, ReentrancyGuard {
      * @param _rate Number of token units a buyer gets per wei  -> 0.02 (6.45 WEI -> initial sale)
      * @param _wallet Address where collected funds will be forwarded to
      * @param _token Address of the token being sold
+     * @param _aggregatorAddress address of the aggregator -> BNB/USD (0x0567F2323251f0Aab15c8dFb1967E4e8A7D42aeE)
      */
-    constructor(uint256 _rate, address payable _wallet, ERC20 _token) {
+    constructor(uint256 _rate, address payable _wallet, ERC20 _token, address _aggregatorAddress) {
         require(_rate > 0);
         require(_wallet != address(0));
 
         rate = _rate;
         wallet = _wallet;
         token = _token;
+        priceFeed = AggregatorV3Interface(_aggregatorAddress)
     }
 
     // -----------------------------------------
@@ -174,7 +179,16 @@ contract Crowdsale is Ownable, ReentrancyGuard {
     function _getTokenAmount(
         uint256 _weiAmount
     ) internal view returns (uint256) {
-        return _weiAmount * rate;
+        // Get the latest BNB/USD price
+        int price = getLatestPrice();
+        
+        // Calculate the rate based on the BNB/USD price and the desired USD token price
+        uint256 usdTokenPrice = 2; // 0.02 USD
+        uint256 bnbUsdPrice = uint256(price);
+        uint256 tokenAmount = (_weiAmount * rate * 1e18) / (usdTokenPrice * bnbUsdPrice);
+
+        return tokenAmount;
+        // return _weiAmount * rate;
     }
 
     /**
@@ -194,5 +208,19 @@ contract Crowdsale is Ownable, ReentrancyGuard {
 
     function _endPresale() external onlyOwner {
         presaleEnded = true;
+    }
+
+    /**
+    * Returns the latest price
+    */
+    function getLatestPrice() public view returns (int) {
+        (
+            uint80 roundID,
+            int price,
+            uint startedAt,
+            uint timeStamp,
+            uint80 answeredInRound
+        ) = priceFeed.latestRoundData();
+        return price;
     }
 }
