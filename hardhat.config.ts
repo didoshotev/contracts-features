@@ -6,7 +6,17 @@ const INFURA_API_KEY = process.env.HARDHAT_INFURA_APY_KEY
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: "0.8.19",
+    // version: "0.8.19",
+    compilers: [
+      {
+        version: "0.8.19",
+        settings: {},
+      },
+      {
+        version: "0.6.0",
+        settings: {},
+      },
+    ],
   },
   networks: {
     hardhat: {

@@ -29,6 +29,7 @@
   "scripts": {
     "compile": "hardhat compile",
     "deploy": "hardhat run scripts/deploy-FLC.ts --network hardhat",
+    "test": "npx hardhat test",
     "start-fork": "hardhat node --network hardhat"
   }
 }
